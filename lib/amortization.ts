@@ -6,10 +6,16 @@ export interface Payment {
   interest: number;
   principal: number;
   balance: number;
+  paidAmount?: number;
+  pendingAmount?: number;
 }
 
 export interface PaymentHistory {
-  date: string;
+  amount: number;
+}
+
+export interface InstallmentPayment {
+  installmentNumber: number;
   amount: number;
 }
 
@@ -24,7 +30,8 @@ export function calculateMonthlyPayment(
 ): number {
   const numerator = rate * Math.pow(1 + rate, periods);
   const denominator = Math.pow(1 + rate, periods) - 1;
-  return principal * (numerator / denominator);
+  const raw = principal * (numerator / denominator);
+  return Math.ceil(raw);
 }
 
 /**
@@ -34,6 +41,7 @@ export function generateAmortizationSchedule(
   principal: number,
   fixedPayment: number,
   capitalPayments: PaymentHistory[] = [],
+  installmentPayments: InstallmentPayment[] = [],
   rate: number = MONTHLY_RATE
 ): Payment[] {
   const schedule: Payment[] = [];
@@ -55,7 +63,8 @@ export function generateAmortizationSchedule(
   while (balance > 0.01 && installmentNumber <= 100) {
     // Safety limit
     const interest = balance * rate;
-    let principalPayment = fixedPayment - interest;
+    const ceiledFixedPayment = Math.ceil(fixedPayment);
+    let principalPayment = ceiledFixedPayment - Math.ceil(interest);
 
     // Adjust if final payment
     if (principalPayment > balance) {
@@ -64,12 +73,25 @@ export function generateAmortizationSchedule(
 
     balance -= principalPayment;
 
+    // Calculate paid amount for this installment
+    const paymentsForThisInstallment = installmentPayments.filter(
+      (p) => p.installmentNumber === installmentNumber
+    );
+    const paidAmount = paymentsForThisInstallment.reduce(
+      (sum, p) => sum + p.amount,
+      0
+    );
+    const totalPayment = Math.ceil(principalPayment + interest);
+    const pendingAmount = Math.max(0, totalPayment - Math.ceil(paidAmount));
+
     schedule.push({
       installmentNumber,
-      payment: principalPayment + interest,
+      payment: totalPayment,
       interest,
       principal: principalPayment,
       balance,
+      paidAmount,
+      pendingAmount,
     });
 
     installmentNumber++;
@@ -85,6 +107,7 @@ export function calculateRemainingBalance(
   principal: number,
   fixedPayment: number,
   capitalPayments: PaymentHistory[] = [],
+  installmentPayments: InstallmentPayment[] = [],
   currentInstallment: number = 0,
   rate: number = MONTHLY_RATE
 ): number {
@@ -92,6 +115,7 @@ export function calculateRemainingBalance(
     principal,
     fixedPayment,
     capitalPayments,
+    installmentPayments,
     rate
   );
 
@@ -110,11 +134,12 @@ export function calculateRemainingBalance(
  * Format currency in COP
  */
 export function formatCurrency(amount: number): string {
+  const ceiled = Math.ceil(amount);
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency: "COP",
     minimumFractionDigits: 0,
-  }).format(amount);
+  }).format(ceiled);
 }
 
 /**
