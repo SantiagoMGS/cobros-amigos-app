@@ -37,21 +37,23 @@ export function generateAmortizationSchedule(
   rate: number = MONTHLY_RATE
 ): Payment[] {
   const schedule: Payment[] = [];
-  let balance = principal;
-  let installmentNumber = 1;
 
-  // Sort capital payments by date (assuming format is sortable)
-  const sortedCapitalPayments = [...capitalPayments].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  // Apply all capital payments to the principal first
+  const totalCapitalPayments = capitalPayments.reduce(
+    (sum, p) => sum + p.amount,
+    0
   );
+  let balance = principal - totalCapitalPayments;
+
+  // If all debt is paid, return empty schedule
+  if (balance <= 0) {
+    return [];
+  }
+
+  let installmentNumber = 1;
 
   while (balance > 0.01 && installmentNumber <= 100) {
     // Safety limit
-    // Check if there's a capital payment for this installment
-    const capitalPayment = sortedCapitalPayments.find(
-      (cp) => parseInt(cp.date.split("-")[1]) === installmentNumber
-    );
-
     const interest = balance * rate;
     let principalPayment = fixedPayment - interest;
 
@@ -69,12 +71,6 @@ export function generateAmortizationSchedule(
       principal: principalPayment,
       balance,
     });
-
-    // Apply capital payment after regular payment
-    if (capitalPayment) {
-      balance -= capitalPayment.amount;
-      if (balance < 0) balance = 0;
-    }
 
     installmentNumber++;
   }

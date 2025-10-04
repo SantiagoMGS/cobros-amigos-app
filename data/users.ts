@@ -14,14 +14,14 @@ export const users: User[] = [
   {
     id: "1",
     username: "marcos",
-    password: "MarcosArango123*",
+    password: "megustalaverga",
     name: "Marcos Arango",
     loanAmount: 10465300,
   },
   {
     id: "2",
     username: "jair",
-    password: "JairViana123*",
+    password: "jair",
     name: "Jair Viana",
     loanAmount: 14585050,
   },

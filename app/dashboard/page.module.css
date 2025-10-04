@@ -321,6 +321,20 @@
   background: #f8f9fa;
 }
 
+.table tfoot {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 700;
+}
+
+.table tfoot th {
+  border-top: 3px solid #667eea;
+  border-bottom: none;
+  padding: 16px 12px;
+  font-size: 15px;
+  text-align: left;
+}
+
 .contextInfo {
   background: white;
   padding: 24px;

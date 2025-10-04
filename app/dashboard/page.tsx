@@ -59,6 +59,24 @@ export default function DashboardPage() {
       return;
     }
 
+    // Calculate current remaining balance
+    const currentTotalCapitalPayments = capitalPayments.reduce(
+      (sum, p) => sum + p.amount,
+      0
+    );
+    const currentRemainingBalance =
+      user.loanAmount - currentTotalCapitalPayments;
+
+    // Validate that the payment doesn't exceed the remaining balance
+    if (amount > currentRemainingBalance) {
+      alert(
+        `El abono no puede ser mayor al saldo pendiente. Saldo actual: ${formatCurrency(
+          currentRemainingBalance
+        )}`
+      );
+      return;
+    }
+
     const newPayment: PaymentHistory = {
       date: newPaymentDate,
       amount,
@@ -289,6 +307,27 @@ export default function DashboardPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  <th>TOTAL</th>
+                  <th>
+                    {formatCurrency(
+                      schedule.reduce((sum, p) => sum + p.payment, 0)
+                    )}
+                  </th>
+                  <th>
+                    {formatCurrency(
+                      schedule.reduce((sum, p) => sum + p.interest, 0)
+                    )}
+                  </th>
+                  <th>
+                    {formatCurrency(
+                      schedule.reduce((sum, p) => sum + p.principal, 0)
+                    )}
+                  </th>
+                  <th></th>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
