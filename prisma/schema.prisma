@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Usuario
+model User {
+  id               String            @id @default(cuid())
+  username         String            @unique
+  password         String
+  name             String
+  loanAmount       Float             // Monto del préstamo original
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  // Relaciones
+  capitalPayments  CapitalPayment[]
+  installmentPayments InstallmentPayment[]
+  
+  @@map("users")
+}
+
+// Modelo de Abono a Capital
+model CapitalPayment {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Float    // Monto del abono a capital
+  paymentDate DateTime @default(now())
+  notes       String?  // Notas opcionales
+  createdAt   DateTime @default(now())
+  
+  // Relaciones
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("capital_payments")
+}
+
+// Modelo de Pago de Cuota
+model InstallmentPayment {
+  id                 String   @id @default(cuid())
+  userId             String
+  installmentNumber  Int      // Número de cuota
+  amount             Float    // Monto pagado
+  paymentDate        DateTime @default(now())
+  notes              String?  // Notas opcionales
+  createdAt          DateTime @default(now())
+  
+  // Relaciones
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, installmentNumber])
+  @@map("installment_payments")
+}

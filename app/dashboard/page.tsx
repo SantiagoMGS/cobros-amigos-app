@@ -45,19 +45,25 @@ export default function DashboardPage() {
     const parsedUser = JSON.parse(storedUser);
     setUser(parsedUser);
 
-    // Load capital payments from localStorage
-    const storedPayments = localStorage.getItem(`payments_${parsedUser.id}`);
-    if (storedPayments) {
-      setCapitalPayments(JSON.parse(storedPayments));
-    }
+    // Load capital payments from database
+    fetch(`/api/payments/capital?userId=${parsedUser.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCapitalPayments(data);
+        }
+      })
+      .catch((err) => console.error("Error cargando pagos de capital:", err));
 
-    // Load installment payments from localStorage
-    const storedInstallmentPayments = localStorage.getItem(
-      `installment_payments_${parsedUser.id}`
-    );
-    if (storedInstallmentPayments) {
-      setInstallmentPayments(JSON.parse(storedInstallmentPayments));
-    }
+    // Load installment payments from database
+    fetch(`/api/payments/installments?userId=${parsedUser.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setInstallmentPayments(data);
+        }
+      })
+      .catch((err) => console.error("Error cargando pagos de cuotas:", err));
   }, [router]);
 
   const handleLogout = () => {
@@ -65,7 +71,7 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  const handleAddPayment = () => {
+  const handleAddPayment = async () => {
     if (!newPaymentAmount || !user) return;
 
     const amount = Math.ceil(parseFloat(newPaymentAmount));
@@ -92,28 +98,50 @@ export default function DashboardPage() {
       return;
     }
 
-    const newPayment: PaymentHistory = { amount };
+    try {
+      const response = await fetch("/api/payments/capital", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, amount }),
+      });
 
-    const updatedPayments = [...capitalPayments, newPayment];
-    setCapitalPayments(updatedPayments);
-    localStorage.setItem(
-      `payments_${user.id}`,
-      JSON.stringify(updatedPayments)
-    );
+      if (!response.ok) {
+        throw new Error("Error al guardar el pago");
+      }
 
-    setNewPaymentAmount("");
-    setShowPaymentForm(false);
+      // Add to local state
+      const newPayment: PaymentHistory = { amount };
+      const updatedPayments = [...capitalPayments, newPayment];
+      setCapitalPayments(updatedPayments);
+
+      setNewPaymentAmount("");
+      setShowPaymentForm(false);
+    } catch (error) {
+      console.error("Error guardando pago:", error);
+      alert("Error al guardar el pago. Por favor intenta de nuevo.");
+    }
   };
 
-  const handleDeletePayment = (index: number) => {
+  const handleDeletePayment = async (index: number) => {
     if (!user) return;
 
-    const updatedPayments = capitalPayments.filter((_, i) => i !== index);
-    setCapitalPayments(updatedPayments);
-    localStorage.setItem(
-      `payments_${user.id}`,
-      JSON.stringify(updatedPayments)
-    );
+    try {
+      const response = await fetch(
+        `/api/payments/capital?userId=${user.id}&index=${index}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al eliminar el pago");
+      }
+
+      // Remove from local state
+      const updatedPayments = capitalPayments.filter((_, i) => i !== index);
+      setCapitalPayments(updatedPayments);
+    } catch (error) {
+      console.error("Error eliminando pago:", error);
+      alert("Error al eliminar el pago. Por favor intenta de nuevo.");
+    }
   };
 
   // Calculate fixed payment and schedule
@@ -137,7 +165,7 @@ export default function DashboardPage() {
     );
   }, [user, fixedPayment, capitalPayments, installmentPayments]);
 
-  const handleAddInstallmentPayment = () => {
+  const handleAddInstallmentPayment = async () => {
     if (!user) return;
 
     if (!newInstallmentNumber || !newInstallmentAmount) {
@@ -197,34 +225,57 @@ export default function DashboardPage() {
       return;
     }
 
-    const newPayment: InstallmentPayment = {
-      installmentNumber,
-      amount,
-    };
+    try {
+      const response = await fetch("/api/payments/installments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, installmentNumber, amount }),
+      });
 
-    const updatedPayments = [...installmentPayments, newPayment].sort(
-      (a, b) => a.installmentNumber - b.installmentNumber
-    );
-    setInstallmentPayments(updatedPayments);
-    localStorage.setItem(
-      `installment_payments_${user.id}`,
-      JSON.stringify(updatedPayments)
-    );
+      if (!response.ok) {
+        throw new Error("Error al guardar el pago");
+      }
 
-    setNewInstallmentNumber("");
-    setNewInstallmentAmount("");
-    setShowInstallmentPaymentForm(false);
+      // Add to local state
+      const newPayment: InstallmentPayment = {
+        installmentNumber,
+        amount,
+      };
+
+      const updatedPayments = [...installmentPayments, newPayment].sort(
+        (a, b) => a.installmentNumber - b.installmentNumber
+      );
+      setInstallmentPayments(updatedPayments);
+
+      setNewInstallmentNumber("");
+      setNewInstallmentAmount("");
+      setShowInstallmentPaymentForm(false);
+    } catch (error) {
+      console.error("Error guardando pago de cuota:", error);
+      alert("Error al guardar el pago. Por favor intenta de nuevo.");
+    }
   };
 
-  const handleDeleteInstallmentPayment = (index: number) => {
+  const handleDeleteInstallmentPayment = async (index: number) => {
     if (!user) return;
 
-    const updatedPayments = installmentPayments.filter((_, i) => i !== index);
-    setInstallmentPayments(updatedPayments);
-    localStorage.setItem(
-      `installment_payments_${user.id}`,
-      JSON.stringify(updatedPayments)
-    );
+    try {
+      const response = await fetch(
+        `/api/payments/installments?userId=${user.id}&index=${index}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al eliminar el pago");
+      }
+
+      // Remove from local state
+      const updatedPayments = installmentPayments.filter((_, i) => i !== index);
+      setInstallmentPayments(updatedPayments);
+    } catch (error) {
+      console.error("Error eliminando pago de cuota:", error);
+      alert("Error al eliminar el pago. Por favor intenta de nuevo.");
+    }
   };
 
   if (!user) {

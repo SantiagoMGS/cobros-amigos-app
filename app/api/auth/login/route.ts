@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { users } from "@/data/users";
+import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
 
-    const user = users.find(
-      (u) => u.username === username && u.password === password
-    );
+    const user = await prisma.user.findUnique({
+      where: { username },
+    });
 
-    if (!user) {
+    if (!user || user.password !== password) {
       return NextResponse.json(
         { error: "Credenciales inválidas" },
         { status: 401 }
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       user: userWithoutPassword,
     });
   } catch (error) {
+    console.error("Error en login:", error);
     return NextResponse.json(
       { error: "Error en el servidor" },
       { status: 500 }
